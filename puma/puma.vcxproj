@@ -42,7 +42,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -398,6 +398,11 @@
     <ClInclude Include="Libraries\include\imgui\imstb_textedit.h" />
     <ClInclude Include="Libraries\include\imgui\imstb_truetype.h" />
     <ClInclude Include="Libraries\include\KHR\khrplatform.h" />
+    <ClInclude Include="model\Mesh.h" />
+    <ClInclude Include="model\MeshLoader.h" />
+    <ClInclude Include="RobotShader.h" />
+    <ClInclude Include="robot\PumaRobot.h" />
+    <ClInclude Include="robot\RobotPart.h" />
     <ClInclude Include="SceneShader.h" />
     <ClInclude Include="view\Camera.h" />
   </ItemGroup>
@@ -412,6 +417,11 @@
     <ClCompile Include="Libraries\include\imgui\imgui_tables.cpp" />
     <ClCompile Include="Libraries\include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Libraries\src\glad.c" />
+    <ClCompile Include="model\Mesh.cpp" />
+    <ClCompile Include="model\MeshLoader.cpp" />
+    <ClCompile Include="RobotShader.cpp" />
+    <ClCompile Include="robot\PumaRobot.cpp" />
+    <ClCompile Include="robot\RobotPart.cpp" />
     <ClCompile Include="SceneShader.cpp" />
     <ClCompile Include="view\Camera.cpp" />
   </ItemGroup>
@@ -550,6 +560,14 @@
     <None Include="Libraries\include\glm\gtx\vector_angle.inl" />
     <None Include="Libraries\include\glm\gtx\vector_query.inl" />
     <None Include="Libraries\include\glm\gtx\wrap.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="resources\mesh1.txt" />
+    <Text Include="resources\mesh2.txt" />
+    <Text Include="resources\mesh3.txt" />
+    <Text Include="resources\mesh4.txt" />
+    <Text Include="resources\mesh5.txt" />
+    <Text Include="resources\mesh6.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
