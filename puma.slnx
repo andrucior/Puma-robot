@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="puma/puma.vcxproj" />
+  <Project Path="puma/puma.vcxproj" Id="64552128-b410-48e9-aa0c-ea63a8029bf1" />
 </Solution>

@@ -13,6 +13,24 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Pliki nagłówkowe\Mesh">
+      <UniqueIdentifier>{3340b40b-896e-4484-a979-3bc3248ff6b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki nagłówkowe\Robot">
+      <UniqueIdentifier>{63f8e1e4-aad9-41f2-8a5e-b2c0c70181b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki nagłówkowe\Shaders">
+      <UniqueIdentifier>{352f05e1-cd0b-4cee-933d-5bbed3492198}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\Mesh">
+      <UniqueIdentifier>{8a39d1d1-6ce3-4e25-a7ae-8c8ec062b677}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\Shaders">
+      <UniqueIdentifier>{92b698aa-4247-45ab-a24d-22c9df234470}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\Robot">
+      <UniqueIdentifier>{adfff5be-cf09-4426-9eae-91330253e773}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Libraries\include\glad\glad.h">
@@ -795,7 +813,22 @@
     <ClInclude Include="Libraries\include\glm\vector_relational.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
+    <ClInclude Include="model\Mesh.h">
+      <Filter>Pliki nagłówkowe\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="model\MeshLoader.h">
+      <Filter>Pliki nagłówkowe\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="robot\RobotPart.h">
+      <Filter>Pliki nagłówkowe\Robot</Filter>
+    </ClInclude>
     <ClInclude Include="SceneShader.h">
+      <Filter>Pliki nagłówkowe\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="RobotShader.h">
+      <Filter>Pliki nagłówkowe\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="robot\PumaRobot.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
   </ItemGroup>
@@ -830,11 +863,26 @@
     <ClCompile Include="Libraries\include\glm\detail\glm.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
-    <ClCompile Include="SceneShader.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
     <ClCompile Include="view\Camera.cpp">
       <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="model\Mesh.cpp">
+      <Filter>Pliki źródłowe\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="model\MeshLoader.cpp">
+      <Filter>Pliki źródłowe\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="RobotShader.cpp">
+      <Filter>Pliki źródłowe\Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneShader.cpp">
+      <Filter>Pliki źródłowe\Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="robot\RobotPart.cpp">
+      <Filter>Pliki źródłowe\Robot</Filter>
+    </ClCompile>
+    <ClCompile Include="robot\PumaRobot.cpp">
+      <Filter>Pliki źródłowe\Robot</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1240,5 +1288,25 @@
     <None Include="Libraries\include\glm\gtx\wrap.inl">
       <Filter>Pliki nagłówkowe</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="resources\mesh1.txt">
+      <Filter>Pliki zasobów</Filter>
+    </Text>
+    <Text Include="resources\mesh2.txt">
+      <Filter>Pliki zasobów</Filter>
+    </Text>
+    <Text Include="resources\mesh3.txt">
+      <Filter>Pliki zasobów</Filter>
+    </Text>
+    <Text Include="resources\mesh4.txt">
+      <Filter>Pliki zasobów</Filter>
+    </Text>
+    <Text Include="resources\mesh5.txt">
+      <Filter>Pliki zasobów</Filter>
+    </Text>
+    <Text Include="resources\mesh6.txt">
+      <Filter>Pliki zasobów</Filter>
+    </Text>
   </ItemGroup>
 </Project>

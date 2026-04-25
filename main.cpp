@@ -19,6 +19,8 @@
 #include "Camera.h"
 #include "MouseController.h"
 #include "puma/SceneShader.h"
+#include "puma/RobotShader.h"
+#include "puma/robot/PumaRobot.h"
 
 GLFWwindow* initWindow(int& H, int& W);
 void UpdateScreenSize(int& H, int& W);
@@ -31,9 +33,20 @@ int main() {
     if ((win = initWindow(H, W)) == nullptr) return -1;
 
     std::shared_ptr<Camera> camera = std::make_shared<Camera>();
-    KeyboardController keyboardController(*camera);
+    std::shared_ptr<PumaRobot> pumaRobot = std::make_shared<PumaRobot>();
+
+    KeyboardController keyboardController(*camera, *pumaRobot);
 
     glm::mat4x4 P = glm::perspective(60.0f * (float)(M_PI / 180.0), float(W) / H, 0.5f, 100.0f);
+
+    // Animation 
+    float animationAngle = 0.0f;
+    float animationSpeed = 2.0f;
+    float circleRadius = 0.4f;
+    float tiltAngle = 120.0f;
+	glm::vec3 tiltAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec3 circleCenter = glm::vec3(-1.5f, 0.3f, 0.0f);
+    glm::vec3 targetNormal = glm::vec3(1.0f, 0.0f, 0.0f);
     
     // Quad VAO
     unsigned int VAO, VBO;
@@ -68,6 +81,7 @@ int main() {
     bool firstFrame = true;
 
     SceneShader shader = SceneShader(P, camera.get());
+    RobotShader robotShader = RobotShader(P, camera.get());
 
     while (!glfwWindowShouldClose(win)) {
         const float currentTime = (float)glfwGetTime();
@@ -89,6 +103,28 @@ int main() {
         glDepthFunc(GL_LESS);
 
         shader.Draw();
+        
+        robotShader.Use();
+        glm::mat4 baseTransform = glm::mat4(1.0f);\
+        if (pumaRobot->isAnimating) {
+            animationAngle += animationSpeed * deltaTime * 50.0f;
+
+            glm::vec4 localPoint(
+                circleRadius * cos(glm::radians(animationAngle)),
+                0.0f,
+                circleRadius * sin(glm::radians(animationAngle)),
+                1.0f 
+            );
+
+            glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(tiltAngle), tiltAxis);
+
+            glm::vec4 rotatedPoint = rotationMatrix * localPoint;
+
+            glm::vec3 targetPos = circleCenter + glm::vec3(rotatedPoint);
+            pumaRobot->ApplyInverseKinematics(targetPos, targetNormal);
+        }
+        pumaRobot->Draw(robotShader, baseTransform);
+
 
         glfwSwapBuffers(win);
         glfwPollEvents();
