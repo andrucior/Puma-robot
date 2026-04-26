@@ -41,14 +41,15 @@ int main() {
 
     // Animation 
     float animationAngle = 0.0f;
-    float animationSpeed = 2.0f;
+    float animationSpeed = 1.5f;
     float circleRadius = 0.4f;
-    float tiltAngle = 120.0f;
-	glm::vec3 tiltAxis = glm::vec3(0.0f, 0.0f, 1.0f);
-    glm::vec3 circleCenter = glm::vec3(-1.5f, 0.3f, 0.0f);
-    glm::vec3 targetNormal = glm::vec3(1.0f, 0.0f, 0.0f);
-    
-    // Quad VAO
+    glm::vec3 circleCenter = glm::vec3(-1.6f, 0.3f, 0.0f);
+
+    float tiltAngle = -60;
+    glm::vec3 tiltAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+	glm::vec3 targetNormal = glm::vec3(0.0f, 1.0f, 0.0f);
+
+    // Quad VAOd
     unsigned int VAO, VBO;
     
     float verts[] = {
@@ -107,21 +108,23 @@ int main() {
         robotShader.Use();
         glm::mat4 baseTransform = glm::mat4(1.0f);\
         if (pumaRobot->isAnimating) {
+
             animationAngle += animationSpeed * deltaTime * 50.0f;
 
             glm::vec4 localPoint(
                 circleRadius * cos(glm::radians(animationAngle)),
                 0.0f,
                 circleRadius * sin(glm::radians(animationAngle)),
-                1.0f 
+                1.0f
             );
 
             glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(tiltAngle), tiltAxis);
-
             glm::vec4 rotatedPoint = rotationMatrix * localPoint;
+            glm::vec3 rotatedNormal = glm::vec3(rotationMatrix * glm::vec4(targetNormal, 0.0f));
 
             glm::vec3 targetPos = circleCenter + glm::vec3(rotatedPoint);
-            pumaRobot->ApplyInverseKinematics(targetPos, targetNormal);
+
+            pumaRobot->ApplyInverseKinematics(targetPos, rotatedNormal);
         }
         pumaRobot->Draw(robotShader, baseTransform);
 
