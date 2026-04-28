@@ -37,7 +37,7 @@ void RobotPart::SetPivotPoint(const glm::vec3& pivot)
     m_pivotPoint = pivot;
 }
 
-void RobotPart::Draw(RobotShader& shader, const glm::mat4& parentTransform) const
+void RobotPart::Draw(SceneShader& shader, const glm::mat4& parentTransform) const
 {
     glm::mat4 currentTransform = parentTransform * m_localTransform;
 

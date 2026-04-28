@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <memory>
-#include "../RobotShader.h" 
+#include "../SceneShader.h" 
 
 class RobotPart {
 public:
@@ -17,7 +17,7 @@ public:
     void SetRotationAxis(const glm::vec3& axis);
     void SetPivotPoint(const glm::vec3& pivot);
 
-    void Draw(RobotShader& shader, const glm::mat4& parentTransform) const;
+    void Draw(SceneShader& shader, const glm::mat4& parentTransform) const;
 
 private:
     std::shared_ptr<Mesh> m_mesh;

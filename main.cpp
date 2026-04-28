@@ -19,7 +19,7 @@
 #include "Camera.h"
 #include "MouseController.h"
 #include "puma/SceneShader.h"
-#include "puma/RobotShader.h"
+#include "puma/Room.h"
 #include "puma/robot/PumaRobot.h"
 
 GLFWwindow* initWindow(int& H, int& W);
@@ -81,8 +81,8 @@ int main() {
     float lastTime = 0.0f;
     bool firstFrame = true;
 
-    SceneShader shader = SceneShader(P, camera.get());
-    RobotShader robotShader = RobotShader(P, camera.get());
+    SceneShader shader(P, camera.get());
+    Room room;
 
     while (!glfwWindowShouldClose(win)) {
         const float currentTime = (float)glfwGetTime();
@@ -103,10 +103,17 @@ int main() {
         glDepthMask(GL_TRUE);
         glDepthFunc(GL_LESS);
 
-        shader.Draw();
+        shader.Use();
         
-        robotShader.Use();
-        glm::mat4 baseTransform = glm::mat4(1.0f);\
+        // Render Room
+        shader.SetMaterial(glm::vec3(0.4f, 0.55f, 0.7f), 0.1f, 16);
+        shader.SetModelMatrix(glm::mat4(1.0f));
+        room.Draw();
+        
+        // Render Robot
+        shader.SetMaterial(glm::vec3(0.6f, 0.6f, 0.6f), 0.4f, 32);
+
+        glm::mat4 baseTransform = glm::mat4(1.0f);
         if (pumaRobot->isAnimating) {
 
             animationAngle += animationSpeed * deltaTime * 50.0f;
@@ -126,7 +133,7 @@ int main() {
 
             pumaRobot->ApplyInverseKinematics(targetPos, rotatedNormal);
         }
-        pumaRobot->Draw(robotShader, baseTransform);
+        pumaRobot->Draw(shader, baseTransform);
 
 
         glfwSwapBuffers(win);

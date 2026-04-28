@@ -39,7 +39,7 @@ PumaRobot::PumaRobot() {
     }
 }
 
-void PumaRobot::Draw(RobotShader& shader, const glm::mat4& baseTransform) {
+void PumaRobot::Draw(SceneShader& shader, const glm::mat4& baseTransform) {
     if (m_root) {
         m_root->Draw(shader, baseTransform);
     }

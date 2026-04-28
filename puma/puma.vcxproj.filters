@@ -825,10 +825,10 @@
     <ClInclude Include="SceneShader.h">
       <Filter>Pliki nagłówkowe\Shaders</Filter>
     </ClInclude>
-    <ClInclude Include="RobotShader.h">
-      <Filter>Pliki nagłówkowe\Shaders</Filter>
-    </ClInclude>
     <ClInclude Include="robot\PumaRobot.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="Room.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
   </ItemGroup>
@@ -872,9 +872,6 @@
     <ClCompile Include="model\MeshLoader.cpp">
       <Filter>Pliki źródłowe\Mesh</Filter>
     </ClCompile>
-    <ClCompile Include="RobotShader.cpp">
-      <Filter>Pliki źródłowe\Shaders</Filter>
-    </ClCompile>
     <ClCompile Include="SceneShader.cpp">
       <Filter>Pliki źródłowe\Shaders</Filter>
     </ClCompile>
@@ -883,6 +880,9 @@
     </ClCompile>
     <ClCompile Include="robot\PumaRobot.cpp">
       <Filter>Pliki źródłowe\Robot</Filter>
+    </ClCompile>
+    <ClCompile Include="Room.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
