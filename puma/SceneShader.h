@@ -9,10 +9,11 @@
 #include "view/Camera.h"
 
 class SceneShader {
-	GLuint roomVAO, roomVBO, shader;
+	GLuint shader;
 	Camera* camera;
 	glm::mat4& P;
-	glm::vec3 lightPos;
+	glm::vec3 lightPosTop;
+	glm::vec3 lightPosLeft;
 
 	const char* vertexSrc = R"(
 		#version 330 core
@@ -44,8 +45,12 @@ class SceneShader {
 		in vec3 FragPos;
 		in vec3 Normal;
 
-		uniform vec3 lightPos;
+		uniform vec3 lightPosTop;
+		uniform vec3 lightPosLeft;
 		uniform vec3 viewPos;
+		uniform vec3 objectColor;
+		uniform float specStrength;
+		uniform int shininess;
 
 		void main()
 		{
@@ -53,84 +58,33 @@ class SceneShader {
 			float ambientStrength = 0.2;
 			vec3 ambient = ambientStrength * vec3(1.0);
 
-			// diffuse
 			vec3 norm = normalize(Normal);
-			vec3 lightDir = normalize(lightPos - FragPos);
-
-			float diff = max(dot(norm, lightDir), 0.0);
-			vec3 diffuse = diff * vec3(1.0);
-
-			// specular
-			float specStrength = 0.1;
 			vec3 viewDir = normalize(viewPos - FragPos);
-			vec3 reflectDir = reflect(-lightDir, norm);
 
-			float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
-			vec3 specular = specStrength * spec * vec3(1.0);
+			// light top
+			vec3 lightDirTop = normalize(lightPosTop - FragPos);
+			float diffTop = max(dot(norm, lightDirTop), 0.0);
+			vec3 diffuseTop = diffTop * vec3(1.0);
+			vec3 reflectDirTop = reflect(-lightDirTop, norm);
+			float specTop = pow(max(dot(viewDir, reflectDirTop), 0.0), float(shininess));
+			vec3 specularTop = specStrength * specTop * vec3(1.0);
 
-			vec3 color = (ambient + diffuse + specular) * vec3(0.4, 0.55, 0.7);
+			// light left
+			vec3 lightDirLeft = normalize(lightPosLeft - FragPos);
+			float diffLeft = max(dot(norm, lightDirLeft), 0.0);
+			vec3 diffuseLeft = diffLeft * vec3(1.0);
+			vec3 reflectDirLeft = reflect(-lightDirLeft, norm);
+			float specLeft = pow(max(dot(viewDir, reflectDirLeft), 0.0), float(shininess));
+			vec3 specularLeft = specStrength * specLeft * vec3(1.0);
+
+			vec3 diffuse = diffuseTop + diffuseLeft;
+			vec3 specular = specularTop + specularLeft;
+
+			vec3 color = (ambient + diffuse + specular) * objectColor;
 
 			FragColor = vec4(color, 1.0);
 		}
 	)";
-
-	float room[216] = {
-		// vertex | normal
-		
-		// floor
-		-5,-1,-5,   0,1,0,
-		 5,-1,-5,   0,1,0,
-		 5,-1, 5,   0,1,0,
-
-		-5,-1,-5,   0,1,0,
-		 5,-1, 5,   0,1,0,
-		-5,-1, 5,   0,1,0,
-
-		// ceiling
-		-5,5,-5,   0,-1,0,
-		 5,5,-5,   0,-1,0,
-		 5,5, 5,   0,-1,0,
-		
-		-5,5,-5,   0,-1,0,
-		 5,5, 5,   0,-1,0,
-		-5,5, 5,   0,-1,0,
-
-		// back wall
-		-5,-1,-5,   0,0,1,
-		5,-1,-5,    0,0,1,
-		5,5,-5,    0,0,1,
-
-		-5,-1,-5,   0,0,1,
-		5,5,-5,    0,0,1,
-		-5,5,-5,   0,0,1,
-
-		// front wall
-		-5,-1,5,    0,0,-1,
-		 5,-1,5,    0,0,-1,
-		 5,5,5,    0,0,-1,
-
-		-5,-1,5,    0,0,-1,
-		 5,5,5,    0,0,-1,
-		-5,5,5,    0,0,-1,
-
-		// left wall
-		-5,-1,-5,   1,0,0,
-		-5,-1,5,    1,0,0,
-		-5,5,5,    1,0,0,
-		
-		-5,-1,-5,   1,0,0,
-		-5,5,5,    1,0,0,
-		-5,5,-5,   1,0,0,
-
-		// right wall
-		5,-1,-5,   -1,0,0,
-		5,-1,5,    -1,0,0,
-		5,5,5,    -1,0,0,
-
-		5,-1,-5,   -1,0,0,
-		5,5,5,    -1,0,0,
-		5,5,-5,    -1,0,0,
-	};
 
 	GLuint compileShader(GLenum type, const char* src);
 
@@ -139,6 +93,8 @@ class SceneShader {
 public:
 	SceneShader(glm::mat4& P, Camera* camera);
 
-	void Draw();
+	void Use();
+	void SetModelMatrix(const glm::mat4& model);
+	void SetMaterial(const glm::vec3& color, float specStrength, int shininess);
 };
 

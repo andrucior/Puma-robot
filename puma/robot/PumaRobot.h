@@ -1,6 +1,6 @@
 #pragma once
 #include "RobotPart.h"
-#include "../RobotShader.h"
+#include "../SceneShader.h"
 #include <vector>
 #include <memory>
 
@@ -8,7 +8,7 @@ class PumaRobot {
 public:
     PumaRobot();
 
-    void Draw(RobotShader& shader, const glm::mat4& baseTransform = glm::mat4(1.0f));
+    void Draw(SceneShader& shader, const glm::mat4& baseTransform = glm::mat4(1.0f));
 
     void SetJointAngle(int jointIndex, float angle);
 	float GetJointAngle(int jointIndex) const;

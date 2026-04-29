@@ -54,43 +54,38 @@ GLuint SceneShader::createProgram()
 SceneShader::SceneShader(glm::mat4& P, Camera* camera)
 	: P(P), camera(camera)
 {
-	glGenVertexArrays(1, &roomVAO);
-	glGenBuffers(1, &roomVBO);
-
-	glBindVertexArray(roomVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, roomVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(room), room, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-
 	shader = createProgram();
-	lightPos = glm::vec3(0.0f, 3.5f, 0.0f);
+	lightPosTop = glm::vec3(0.0f, 3.5f, 0.0f);
+	lightPosLeft = glm::vec3(0.0f, 1.0f, 3.5f);
 }
 
-void SceneShader::Draw()
+void SceneShader::Use()
 {
-	glDisable(GL_CULL_FACE);
+	glUseProgram(shader);
+	glUniform3fv(glGetUniformLocation(shader, "lightPosTop"), 1, glm::value_ptr(lightPosTop));
+	glUniform3fv(glGetUniformLocation(shader, "lightPosLeft"), 1, glm::value_ptr(lightPosLeft));
+	glUniform3fv(glGetUniformLocation(shader, "viewPos"), 1, glm::value_ptr(camera->cameraPosition));
+}
 
-	glm::mat4 model = glm::mat4(1.0f);
+void SceneShader::SetModelMatrix(const glm::mat4& model)
+{
+	glUseProgram(shader);
 	glm::mat4 view = camera->view();
 	glm::mat4 mvp = P * view * model;
 
-	glUseProgram(shader);
-
 	GLuint loc = glGetUniformLocation(shader, "MVP");
 	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mvp));
-	glUniform3fv(glGetUniformLocation(shader, "lightPos"), 1, glm::value_ptr(lightPos));
-	glUniform3fv(glGetUniformLocation(shader, "viewPos"), 1, glm::value_ptr(camera->cameraPosition));
 
 	GLuint modelLoc = glGetUniformLocation(shader, "model");
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-
-	glBindVertexArray(roomVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-	glEnable(GL_CULL_FACE);
 }
+
+void SceneShader::SetMaterial(const glm::vec3& color, float specStrength, int shininess)
+{
+	glUseProgram(shader);
+	glUniform3fv(glGetUniformLocation(shader, "objectColor"), 1, glm::value_ptr(color));
+	glUniform1f(glGetUniformLocation(shader, "specStrength"), specStrength);
+	glUniform1i(glGetUniformLocation(shader, "shininess"), shininess);
+}
+
 
