@@ -9,6 +9,7 @@ public:
     PumaRobot();
 
     void Draw(SceneShader& shader, const glm::mat4& baseTransform = glm::mat4(1.0f));
+    void DrawShadow(class ShadowVolumeShader& shader, const glm::mat4& baseTransform = glm::mat4(1.0f));
 
     void SetJointAngle(int jointIndex, float angle);
 	float GetJointAngle(int jointIndex) const;

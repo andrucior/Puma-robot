@@ -80,12 +80,18 @@ void SceneShader::SetModelMatrix(const glm::mat4& model)
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 }
 
+void SceneShader::SetAmbientOnly(bool isAmbient)
+{
+	ambientOnly = isAmbient;
+}
+
 void SceneShader::SetMaterial(const glm::vec3& color, float specStrength, int shininess)
 {
 	glUseProgram(shader);
 	glUniform3fv(glGetUniformLocation(shader, "objectColor"), 1, glm::value_ptr(color));
 	glUniform1f(glGetUniformLocation(shader, "specStrength"), specStrength);
 	glUniform1i(glGetUniformLocation(shader, "shininess"), shininess);
+	glUniform1i(glGetUniformLocation(shader, "ambientOnly"), ambientOnly ? 1 : 0);
 }
 
 

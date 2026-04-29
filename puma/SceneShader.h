@@ -51,12 +51,18 @@ class SceneShader {
 		uniform vec3 objectColor;
 		uniform float specStrength;
 		uniform int shininess;
+		uniform bool ambientOnly;
 
 		void main()
 		{
 			// ambient
 			float ambientStrength = 0.2;
 			vec3 ambient = ambientStrength * vec3(1.0);
+
+			if (ambientOnly) {
+				FragColor = vec4(ambient * objectColor, 1.0);
+				return;
+			}
 
 			vec3 norm = normalize(Normal);
 			vec3 viewDir = normalize(viewPos - FragPos);
@@ -90,11 +96,14 @@ class SceneShader {
 
 	GLuint createProgram();
 
+	bool ambientOnly = false;
+
 public:
 	SceneShader(glm::mat4& P, Camera* camera);
 
 	void Use();
 	void SetModelMatrix(const glm::mat4& model);
 	void SetMaterial(const glm::vec3& color, float specStrength, int shininess);
+	void SetAmbientOnly(bool isAmbient);
 };
 

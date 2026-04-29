@@ -1,9 +1,12 @@
 #include "Mesh.h"
+#include "Mesh.h"
 #include <utility>
+#include <map>
+#include <algorithm>
 
-Mesh::Mesh(const std::vector<float>& vertices, const std::vector<unsigned int>& indices)
-    : VAO(0), VBO(0), EBO(0), indicesCount(0) {
-    setupMesh(vertices, indices);
+Mesh::Mesh(const std::vector<float>& vertices, const std::vector<unsigned int>& indices, const std::vector<Edge>& edges)
+    : VAO(0), VBO(0), EBO(0), indicesCount(0), vertices(vertices), indices(indices), edges(edges) {
+    setupMesh();
 }
 
 Mesh::~Mesh() {
@@ -15,7 +18,8 @@ Mesh::~Mesh() {
 }
 
 Mesh::Mesh(Mesh&& other) noexcept
-    : VAO(other.VAO), VBO(other.VBO), EBO(other.EBO), indicesCount(other.indicesCount) {
+    : VAO(other.VAO), VBO(other.VBO), EBO(other.EBO), indicesCount(other.indicesCount),
+      vertices(std::move(other.vertices)), indices(std::move(other.indices)), edges(std::move(other.edges)) {
     other.VAO = 0;
     other.VBO = 0;
     other.EBO = 0;
@@ -33,6 +37,9 @@ Mesh& Mesh::operator=(Mesh&& other) noexcept {
         VBO = other.VBO;
         EBO = other.EBO;
         indicesCount = other.indicesCount;
+        vertices = std::move(other.vertices);
+        indices = std::move(other.indices);
+        edges = std::move(other.edges);
 
         other.VAO = 0;
         other.VBO = 0;
@@ -42,8 +49,47 @@ Mesh& Mesh::operator=(Mesh&& other) noexcept {
     return *this;
 }
 
-void Mesh::setupMesh(const std::vector<float>& vertices, const std::vector<unsigned int>& indices) {
-    indicesCount = static_cast<unsigned int>(indices.size());
+void Mesh::setupMesh() {
+    std::vector<unsigned int> adjIndices;
+    adjIndices.reserve((indices.size() / 3) * 6);
+
+    std::map<std::pair<unsigned int, unsigned int>, const Edge*> edgeMap;
+    for (const auto& e : edges) {
+        unsigned int mn = std::min(e.e1, e.e2);
+        unsigned int mx = std::max(e.e1, e.e2);
+        edgeMap[{mn, mx}] = &e;
+    }
+
+    for (size_t t = 0; t < indices.size() / 3; ++t) {
+        unsigned int v0 = indices[t * 3 + 0];
+        unsigned int v1 = indices[t * 3 + 1];
+        unsigned int v2 = indices[t * 3 + 2];
+
+        auto getOppositeVertex = [&](unsigned int vA, unsigned int vB) -> unsigned int {
+            unsigned int mn = std::min(vA, vB);
+            unsigned int mx = std::max(vA, vB);
+            auto it = edgeMap.find({mn, mx});
+            if (it != edgeMap.end()) {
+                int neighborT = (it->second->t1 == t) ? it->second->t2 : it->second->t1;
+                if (neighborT >= 0 && neighborT < static_cast<int>(indices.size() / 3)) {
+                    for (int i = 0; i < 3; ++i) {
+                        unsigned int v = indices[neighborT * 3 + i];
+                        if (v != vA && v != vB) return v;
+                    }
+                }
+            }
+            return vA;
+        };
+
+        adjIndices.push_back(v0);
+        adjIndices.push_back(getOppositeVertex(v0, v1));
+        adjIndices.push_back(v1);
+        adjIndices.push_back(getOppositeVertex(v1, v2));
+        adjIndices.push_back(v2);
+        adjIndices.push_back(getOppositeVertex(v2, v0));
+    }
+
+    indicesCount = static_cast<unsigned int>(adjIndices.size());
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -55,7 +101,7 @@ void Mesh::setupMesh(const std::vector<float>& vertices, const std::vector<unsig
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, adjIndices.size() * sizeof(unsigned int), adjIndices.data(), GL_STATIC_DRAW);
 
     // Pozycje
     glEnableVertexAttribArray(0);
@@ -69,6 +115,6 @@ void Mesh::setupMesh(const std::vector<float>& vertices, const std::vector<unsig
 
 void Mesh::Draw() const {
     glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, indicesCount, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES_ADJACENCY, indicesCount, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }

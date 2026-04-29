@@ -404,6 +404,7 @@
     <ClInclude Include="robot\RobotPart.h" />
     <ClInclude Include="Room.h" />
     <ClInclude Include="SceneShader.h" />
+    <ClInclude Include="ShadowVolumeShader.h" />
     <ClInclude Include="view\Camera.h" />
   </ItemGroup>
   <ItemGroup>
@@ -423,6 +424,7 @@
     <ClCompile Include="robot\RobotPart.cpp" />
     <ClCompile Include="Room.cpp" />
     <ClCompile Include="SceneShader.cpp" />
+    <ClCompile Include="ShadowVolumeShader.cpp" />
     <ClCompile Include="view\Camera.cpp" />
   </ItemGroup>
   <ItemGroup>

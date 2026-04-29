@@ -18,6 +18,7 @@ public:
     void SetPivotPoint(const glm::vec3& pivot);
 
     void Draw(SceneShader& shader, const glm::mat4& parentTransform) const;
+    void DrawShadow(class ShadowVolumeShader& shader, const glm::mat4& parentTransform) const;
 
 private:
     std::shared_ptr<Mesh> m_mesh;

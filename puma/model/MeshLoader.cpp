@@ -65,15 +65,17 @@ Mesh MeshLoader::LoadFromFile(const std::string& filepath) {
 
     // 4. Wczytywanie krawêdzi
     int n;
+    std::vector<Edge> finalEdges;
     if (file >> n) {
+        finalEdges.reserve(n);
         for (int i = 0; i < n; ++i) {
             int e1, e2, t1, t2;
             file >> e1 >> e2 >> t1 >> t2;
-            // TODO: Bry³a cienia
+            finalEdges.push_back({ static_cast<unsigned int>(e1), static_cast<unsigned int>(e2), t1, t2 });
         }
     }
 
     file.close();
 
-    return Mesh(finalVertices, finalIndices);
+    return Mesh(finalVertices, finalIndices, finalEdges);
 }

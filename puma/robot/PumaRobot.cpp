@@ -45,6 +45,12 @@ void PumaRobot::Draw(SceneShader& shader, const glm::mat4& baseTransform) {
     }
 }
 
+void PumaRobot::DrawShadow(ShadowVolumeShader& shader, const glm::mat4& baseTransform) {
+    if (m_root) {
+        m_root->DrawShadow(shader, baseTransform);
+    }
+}
+
 void PumaRobot::SetJointAngle(int jointIndex, float angle) {
     if (jointIndex >= 0 && jointIndex < m_parts.size()) {
         m_parts[jointIndex]->SetJointAngle(angle);
