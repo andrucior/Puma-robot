@@ -45,7 +45,7 @@ void PumaRobot::Draw(SceneShader& shader, const glm::mat4& baseTransform) {
     }
 }
 
-void PumaRobot::DrawShadow(ShadowVolumeShader& shader, const glm::mat4& baseTransform) {
+void PumaRobot::DrawShadow(DepthShader& shader, const glm::mat4& baseTransform) {
     if (m_root) {
         m_root->DrawShadow(shader, baseTransform);
     }

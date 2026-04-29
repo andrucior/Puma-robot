@@ -23,14 +23,17 @@ class SceneShader {
 
 		uniform mat4 MVP;
 		uniform mat4 model;
+		uniform mat4 lightSpaceMatrix;
 
 		out vec3 FragPos;
 		out vec3 Normal;
+		out vec4 fragPosLightSpace; 
 
 		void main()
 		{
 			FragPos = vec3(model * vec4(aPos, 1.0));
 			Normal = mat3(transpose(inverse(model))) * aNormal;
+			fragPosLightSpace = lightSpaceMatrix * vec4(FragPos, 1.0);
 
 			gl_Position = MVP * vec4(aPos, 1.0);
 		}
@@ -44,6 +47,7 @@ class SceneShader {
 
 		in vec3 FragPos;
 		in vec3 Normal;
+		in vec4 fragPosLightSpace; 
 
 		uniform vec3 lightPosTop;
 		uniform vec3 lightPosLeft;
@@ -52,6 +56,30 @@ class SceneShader {
 		uniform float specStrength;
 		uniform int shininess;
 		uniform bool ambientOnly;
+		uniform sampler2D shadowMap;
+
+		float ShadowCalc(vec4 fragPosLightSpace) {
+			vec3 proj = fragPosLightSpace.xyz / fragPosLightSpace.w;
+			proj = proj * 0.5 + 0.5;
+    
+			if (proj.z > 1.0) return 0.0;
+
+			float currentDepth = proj.z;
+			float bias = max(0.05 * (1.0 - dot(normalize(Normal), normalize(lightPosTop - FragPos))), 0.005);
+    
+			float shadow = 0.0;
+			vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+    
+			// Pętla wokół aktualnego piksela
+			for(int x = -2; x <= 2; ++x) {
+				for(int y = -2; y <= 2; ++y) {
+					float pcfDepth = texture(shadowMap, proj.xy + vec2(x, y) * texelSize).r; 
+					shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;        
+				}    
+			}
+    
+			return shadow / 25; 
+		}
 
 		void main()
 		{
@@ -86,8 +114,9 @@ class SceneShader {
 			vec3 diffuse = diffuseTop + diffuseLeft;
 			vec3 specular = specularTop + specularLeft;
 
-			vec3 color = (ambient + diffuse + specular) * objectColor;
+			float shadow = ShadowCalc(fragPosLightSpace);
 
+			vec3 color = (ambient + (1.0 - shadow) * (diffuse + specular)) * objectColor;
 			FragColor = vec4(color, 1.0);
 		}
 	)";
@@ -103,7 +132,9 @@ public:
 
 	void Use();
 	void SetModelMatrix(const glm::mat4& model);
-	void SetMaterial(const glm::vec3& color, float specStrength, int shininess);
+	void SetMaterial(const glm::vec3& color, float specStrength, int shininess) const;
 	void SetAmbientOnly(bool isAmbient);
+	void SetLightSpaceMatrix(const glm::mat4& lightSpaceMtx) const;
+	void SetShadowMap() const;
 };
 

@@ -21,7 +21,7 @@
 #include "puma/SceneShader.h"
 #include "puma/Room.h"
 #include "puma/robot/PumaRobot.h"
-#include "puma/ShadowVolumeShader.h"
+#include "puma/DepthShader.h"
 
 GLFWwindow* initWindow(int& H, int& W);
 void UpdateScreenSize(int& H, int& W);
@@ -77,8 +77,8 @@ int main() {
     GLuint tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, W, H, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     glViewport(0, 0, W, H);
 
@@ -86,7 +86,6 @@ int main() {
     bool firstFrame = true;
 
     SceneShader shader(P, camera.get());
-    ShadowVolumeShader shadowShader(P, camera.get());
     Room room;
     const char* quadVert = R"(
     #version 330 core
@@ -96,7 +95,7 @@ int main() {
     const char* quadFrag = R"(
     #version 330 core
     out vec4 FragColor;
-    void main() { FragColor = vec4(0.0, 0.0, 0.0, 0.5); } // Półprzezroczysty czarny cień
+    void main() { FragColor = vec4(0.0, 0.0, 0.0, 0.5); } 
 )";
 
     GLuint vQuadShader = glCreateShader(GL_VERTEX_SHADER);
@@ -116,10 +115,31 @@ int main() {
     glDeleteShader(vQuadShader);
     glDeleteShader(fQuadShader);
 
+    GLuint depthMapFBO, depthMap;
+    const int SHADOW_W = 4096, SHADOW_H = 4096;
+
+    // Tworzymy depth mape
+    glGenFramebuffers(1, &depthMapFBO);
+    glGenTextures(1, &depthMap);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_W, SHADOW_H,
+        0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    float border[] = { 1,1,1,1 };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, border);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     glm::vec3 lightPosTop = glm::vec3(0.0f, 3.5f, 0.0f);
     glm::vec3 lightPosLeft = glm::vec3(0.0f, 1.0f, 3.5f);
-    glm::vec3 averagedLightPos = (lightPosTop + lightPosLeft) / 2.0f;
-    shadowShader.SetLightPos(averagedLightPos);
+    DepthShader depthShader = DepthShader();
 
     while (!glfwWindowShouldClose(win)) {
         const float currentTime = (float)glfwGetTime();
@@ -127,83 +147,68 @@ int main() {
         lastTime = currentTime;
 
         camera->update();
-        
-        if (MouseController::g_leftDown) {
+        if (MouseController::g_leftDown)
             camera->updateFromController();
-        }
 
-        // --- KROK 1: RENDEROWANIE SCENY (NORMALNE) ---
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LESS);
-        glDepthMask(GL_TRUE);
-        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-        glDisable(GL_STENCIL_TEST);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-        shader.Use();
-        shader.SetMaterial(glm::vec3(0.4f, 0.55f, 0.7f), 0.1f, 16);
-        shader.SetModelMatrix(glm::mat4(1.0f));
-        room.Draw();
-
+        // Animacja robota
         glm::mat4 baseTransform = glm::mat4(1.0f);
         if (pumaRobot->isAnimating) {
-            // (Twój kod animacji bez zmian...)
             animationAngle += animationSpeed * deltaTime * 50.0f;
-            glm::vec4 localPoint(circleRadius * cos(glm::radians(animationAngle)), 0.0f, circleRadius * sin(glm::radians(animationAngle)), 1.0f);
+            glm::vec4 localPoint(circleRadius * cos(glm::radians(animationAngle)), 0.0f,
+                circleRadius * sin(glm::radians(animationAngle)), 1.0f);
             glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(tiltAngle), tiltAxis);
             glm::vec4 rotatedPoint = rotationMatrix * localPoint;
             glm::vec3 rotatedNormal = glm::vec3(rotationMatrix * glm::vec4(targetNormal, 0.0f));
             glm::vec3 targetPos = circleCenter + glm::vec3(rotatedPoint);
             pumaRobot->ApplyInverseKinematics(targetPos, rotatedNormal);
         }
+
+        // Macierz światła 
+        glm::mat4 lightView = glm::lookAt(lightPosTop, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+        glm::mat4 lightProj = glm::ortho(-10.f, 10.f, -10.f, 10.f, 0.1f, 20.f);
+        glm::mat4 lightSpaceMatrix = lightProj * lightView;
+
+        // Depth map z perspektywy światła
+        glViewport(0, 0, SHADOW_W, SHADOW_H);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_FRONT); // Peter panning
+        depthShader.Use();
+        depthShader.SetLightSpaceMatrix(lightSpaceMatrix);
+        depthShader.SetModelMatrix(glm::mat4(1.0f));
+        room.Draw();
+        pumaRobot->DrawShadow(depthShader, baseTransform);
+        glCullFace(GL_BACK);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // Render
+        glViewport(0, 0, W, H);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+
+        shader.Use();
+        shader.SetLightSpaceMatrix(lightSpaceMatrix);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, depthMap);
+        shader.SetShadowMap();
+
+        shader.SetMaterial(glm::vec3(0.4f, 0.55f, 0.7f), 0.1f, 16);
+        shader.SetModelMatrix(glm::mat4(1.0f));
+        GLboolean depthEnabled;
+        glGetBooleanv(GL_DEPTH_TEST, &depthEnabled);
+
+        GLint depthFunc;
+        glGetIntegerv(GL_DEPTH_FUNC, &depthFunc);
+        room.Draw();
+
         shader.SetMaterial(glm::vec3(0.6f, 0.6f, 0.6f), 0.4f, 32);
         pumaRobot->Draw(shader, baseTransform);
-
-        // --- KROK 2: GENEROWANIE OBJĘTOŚCI CIENIA W STENCIL BUFFER (Z-FAIL) ---
-        glEnable(GL_DEPTH_CLAMP); // KLUCZOWE! Pozwala na rysowanie punktów w nieskończoności.
-        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Nie rysujemy kolorów
-        glDepthMask(GL_FALSE); // Nie nadpisujemy bufora głębi
-
-        glDepthFunc(GL_LEQUAL);
-
-        glEnable(GL_STENCIL_TEST);
-        glStencilFunc(GL_ALWAYS, 0, 0xFF);
-
-        glDisable(GL_CULL_FACE); // Musimy rysować zarówno przednie, jak i tylne ściany objętości
-
-        // Z-fail: modyfikujemy stencil tylko gdy test GŁĘBI ZAWODZI (Depth Fails)
-        // Dla tylnych ścian (Back faces) -> Inkrementacja
-        glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
-        // Dla przednich ścian (Front faces) -> Dekrementacja
-        glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
-
-        shadowShader.Use();
-        pumaRobot->DrawShadow(shadowShader, baseTransform);
-
-        glDisable(GL_DEPTH_CLAMP);
-
-        // --- KROK 3: RYSOWANIE CIENIA NA PODSTAWIE STENCIL BUFFER ---
-        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-        glDisable(GL_DEPTH_TEST); // Rysujemy quad na całym ekranie
-
-        // Rysuj tylko tam, gdzie stencil nie jest równy 0 (czyli wewnątrz cienia)
-        glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
-        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP); // Nie modyfikuj już stencila
-
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        // Użyj prostego shadera do quada
-        glUseProgram(quadShader);
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        glBindVertexArray(0);
-
-        glDisable(GL_BLEND);
-
 
         glfwSwapBuffers(win);
         glfwPollEvents();

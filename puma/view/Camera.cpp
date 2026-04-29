@@ -7,7 +7,6 @@ glm::mat4 Camera::view() const
         cameraPosition + front,
         up
     );
-
 }
 
 void Camera::constrainPitch()

@@ -27,7 +27,7 @@ public:
     std::vector<float> vertices;
     std::vector<unsigned int> indices;
     std::vector<Edge> edges;
-
+    std::vector<unsigned int> vertToPos;
 private:
     unsigned int VAO, VBO, EBO;
     unsigned int indicesCount;

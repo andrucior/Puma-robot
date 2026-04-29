@@ -1,6 +1,5 @@
 #include "RobotPart.h"
 #include "RobotPart.h"
-#include "../ShadowVolumeShader.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -58,7 +57,7 @@ void RobotPart::Draw(SceneShader& shader, const glm::mat4& parentTransform) cons
     }
 }
 
-void RobotPart::DrawShadow(ShadowVolumeShader& shader, const glm::mat4& parentTransform) const
+void RobotPart::DrawShadow(DepthShader& shader, const glm::mat4& parentTransform) const
 {
     glm::mat4 currentTransform = parentTransform * m_localTransform;
 

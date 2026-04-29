@@ -139,6 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DepthShader.h" />
     <ClInclude Include="input\KeyboardController.h" />
     <ClInclude Include="input\MouseController.h" />
     <ClInclude Include="Libraries\include\glad\glad.h" />
@@ -404,11 +405,11 @@
     <ClInclude Include="robot\RobotPart.h" />
     <ClInclude Include="Room.h" />
     <ClInclude Include="SceneShader.h" />
-    <ClInclude Include="ShadowVolumeShader.h" />
     <ClInclude Include="view\Camera.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\main.cpp" />
+    <ClCompile Include="DepthShader.cpp" />
     <ClCompile Include="input\MouseController.cpp" />
     <ClCompile Include="Libraries\include\glm\detail\glm.cpp" />
     <ClCompile Include="Libraries\include\imgui\imgui.cpp" />
@@ -424,7 +425,6 @@
     <ClCompile Include="robot\RobotPart.cpp" />
     <ClCompile Include="Room.cpp" />
     <ClCompile Include="SceneShader.cpp" />
-    <ClCompile Include="ShadowVolumeShader.cpp" />
     <ClCompile Include="view\Camera.cpp" />
   </ItemGroup>
   <ItemGroup>
