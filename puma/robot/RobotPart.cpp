@@ -1,4 +1,5 @@
 #include "RobotPart.h"
+#include "RobotPart.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -53,5 +54,24 @@ void RobotPart::Draw(SceneShader& shader, const glm::mat4& parentTransform) cons
     for (const auto& child : m_children)
     {
         child->Draw(shader, currentTransform);
+    }
+}
+
+void RobotPart::DrawShadow(DepthShader& shader, const glm::mat4& parentTransform) const
+{
+    glm::mat4 currentTransform = parentTransform * m_localTransform;
+
+    currentTransform = glm::translate(currentTransform, m_pivotPoint);
+    currentTransform = glm::rotate(currentTransform, glm::radians(m_jointAngle), m_rotationAxis);
+    currentTransform = glm::translate(currentTransform, -m_pivotPoint);
+
+    shader.SetModelMatrix(currentTransform);
+    if (m_mesh)
+    {
+        m_mesh->Draw();
+    }
+    for (const auto& child : m_children)
+    {
+        child->DrawShadow(shader, currentTransform);
     }
 }

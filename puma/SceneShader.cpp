@@ -73,19 +73,34 @@ void SceneShader::SetModelMatrix(const glm::mat4& model)
 	glm::mat4 view = camera->view();
 	glm::mat4 mvp = P * view * model;
 
-	GLuint loc = glGetUniformLocation(shader, "MVP");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mvp));
-
-	GLuint modelLoc = glGetUniformLocation(shader, "model");
-	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(glGetUniformLocation(shader, "MVP"), 1, GL_FALSE, glm::value_ptr(mvp));
+	glUniformMatrix4fv(glGetUniformLocation(shader, "model"), 1, GL_FALSE, glm::value_ptr(model));
 }
 
-void SceneShader::SetMaterial(const glm::vec3& color, float specStrength, int shininess)
+void SceneShader::SetAmbientOnly(bool isAmbient)
+{
+	ambientOnly = isAmbient;
+}
+
+void SceneShader::SetLightSpaceMatrix(const glm::mat4& lightSpaceMtx) const
+{
+	glUseProgram(shader);
+	glUniformMatrix4fv(glGetUniformLocation(shader, "lightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightSpaceMtx));
+}
+
+void SceneShader::SetShadowMap() const
+{
+	glUseProgram(shader);
+	glUniform1i(glGetUniformLocation(shader, "shadowMap"), 1);
+}
+
+void SceneShader::SetMaterial(const glm::vec3& color, float specStrength, int shininess) const
 {
 	glUseProgram(shader);
 	glUniform3fv(glGetUniformLocation(shader, "objectColor"), 1, glm::value_ptr(color));
 	glUniform1f(glGetUniformLocation(shader, "specStrength"), specStrength);
 	glUniform1i(glGetUniformLocation(shader, "shininess"), shininess);
+	glUniform1i(glGetUniformLocation(shader, "ambientOnly"), ambientOnly ? 1 : 0);
 }
 
 
