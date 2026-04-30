@@ -53,8 +53,10 @@ class SceneShader {
 		uniform vec3 lightPosLeft;
 		uniform vec3 viewPos;
 		uniform vec3 objectColor;
+		uniform float alphaValue;
 		uniform float specStrength;
 		uniform int shininess;
+		uniform bool receiveShadows;
 		uniform bool ambientOnly;
 		uniform sampler2D shadowMap;
 
@@ -113,11 +115,14 @@ class SceneShader {
 
 			vec3 diffuse = diffuseTop + diffuseLeft;
 			vec3 specular = specularTop + specularLeft;
-
-			float shadow = ShadowCalc(fragPosLightSpace);
+			
+			float shadow = 0.0;
+			if (receiveShadows) {
+				shadow = ShadowCalc(fragPosLightSpace);
+			}
 
 			vec3 color = (ambient + (1.0 - shadow) * (diffuse + specular)) * objectColor;
-			FragColor = vec4(color, 1.0);
+			FragColor = vec4(color, alphaValue);
 		}
 	)";
 
@@ -132,9 +137,10 @@ public:
 
 	void Use();
 	void SetModelMatrix(const glm::mat4& model);
-	void SetMaterial(const glm::vec3& color, float specStrength, int shininess) const;
+	void SetMaterial(const glm::vec3& color, float specStrength, int shininess, float alpha = 1.0f) const;
 	void SetAmbientOnly(bool isAmbient);
 	void SetLightSpaceMatrix(const glm::mat4& lightSpaceMtx) const;
 	void SetShadowMap() const;
+	void SetReceiveShadows(bool receive) const;
 };
 

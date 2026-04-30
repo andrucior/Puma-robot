@@ -94,10 +94,17 @@ void SceneShader::SetShadowMap() const
 	glUniform1i(glGetUniformLocation(shader, "shadowMap"), 1);
 }
 
-void SceneShader::SetMaterial(const glm::vec3& color, float specStrength, int shininess) const
+void SceneShader::SetReceiveShadows(bool receive) const 
+{
+	int loc = glGetUniformLocation(shader, "receiveShadows");
+	glUniform1i(loc, receive ? 1 : 0);
+}
+
+void SceneShader::SetMaterial(const glm::vec3& color, float specStrength, int shininess, float alpha) const
 {
 	glUseProgram(shader);
 	glUniform3fv(glGetUniformLocation(shader, "objectColor"), 1, glm::value_ptr(color));
+	glUniform1f(glGetUniformLocation(shader, "alphaValue"), alpha);
 	glUniform1f(glGetUniformLocation(shader, "specStrength"), specStrength);
 	glUniform1i(glGetUniformLocation(shader, "shininess"), shininess);
 	glUniform1i(glGetUniformLocation(shader, "ambientOnly"), ambientOnly ? 1 : 0);
