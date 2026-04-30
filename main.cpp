@@ -40,7 +40,7 @@ int main() {
 
     KeyboardController keyboardController(*camera, *pumaRobot);
 
-    glm::mat4x4 P = glm::perspective(60.0f * (float)(M_PI / 180.0), float(W) / H, 0.5f, 100.0f);
+    glm::mat4x4 P = glm::perspective(60.0f * (float)(M_PI / 180.0), float(W) / H, 0.5f, 1000.0f);
 
     // Animation 
     float animationAngle = 0.0f;
@@ -51,6 +51,36 @@ int main() {
     float tiltAngle = -60;
     glm::vec3 tiltAxis = glm::vec3(0.0f, 0.0f, 1.0f);
 	glm::vec3 targetNormal = glm::vec3(0.0f, 1.0f, 0.0f);
+
+    // Blacha VAO
+    unsigned int sheetVAO, sheetVBO;
+    float sheetSize = circleRadius * 2.0f + 0.3f; 
+    float halfSize = sheetSize / 2.0f;
+    float sheetVerts[] = {
+        -halfSize, 0.0f, -halfSize,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
+        -halfSize, 0.0f,  halfSize,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
+         halfSize, 0.0f,  halfSize,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
+
+        -halfSize, 0.0f, -halfSize,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
+         halfSize, 0.0f,  halfSize,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
+         halfSize, 0.0f, -halfSize,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f
+    };
+
+    glGenVertexArrays(1, &sheetVAO);
+    glGenBuffers(1, &sheetVBO);
+    glBindVertexArray(sheetVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, sheetVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(sheetVerts), sheetVerts, GL_STATIC_DRAW);
+    
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    glm::mat4 sheetModelMatrix = glm::translate(glm::mat4(1.0f), circleCenter);
+    sheetModelMatrix = glm::rotate(sheetModelMatrix, glm::radians(tiltAngle), tiltAxis);
 
     // Quad VAOd
     unsigned int VAO, VBO;
@@ -116,12 +146,12 @@ int main() {
     #version 330 core
     layout (location = 0) in vec2 aPos;
     void main() { gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0); }
-)";
+    )";
     const char* quadFrag = R"(
     #version 330 core
     out vec4 FragColor;
     void main() { FragColor = vec4(0.0, 0.0, 0.0, 0.5); } 
-)";
+    )";
 
     GLuint vQuadShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vQuadShader, 1, &quadVert, nullptr);
@@ -163,7 +193,7 @@ int main() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glm::vec3 lightPosTop = glm::vec3(0.0f, 3.5f, 0.0f);
-    glm::vec3 lightPosLeft = glm::vec3(0.0f, 1.0f, 3.5f);
+    glm::vec3 lightPosLeft = glm::vec3(0.0f, 0.0f, 3.5f);
     DepthShader depthShader = DepthShader();
     ParticleShader particleShader = ParticleShader();
     ParticleSystem particleSystem = ParticleSystem(*pumaRobot);
@@ -193,11 +223,12 @@ int main() {
         particleSystem.Update(deltaTime);
 
         // Macierz światła 
-        glm::mat4 lightView = glm::lookAt(lightPosTop, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+        glm::mat4 lightView = glm::lookAt(lightPosLeft + lightPosTop, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
         glm::mat4 lightProj = glm::ortho(-10.f, 10.f, -10.f, 10.f, 0.1f, 20.f);
         glm::mat4 lightSpaceMatrix = lightProj * lightView;
 
         // Depth map z perspektywy światła
+        glDisable(GL_STENCIL_TEST);
         glViewport(0, 0, SHADOW_W, SHADOW_H);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
@@ -208,34 +239,37 @@ int main() {
         depthShader.Use();
         depthShader.SetLightSpaceMatrix(lightSpaceMatrix);
         depthShader.SetModelMatrix(glm::mat4(1.0f));
-        room.Draw();
         pumaRobot->DrawShadow(depthShader, baseTransform);
+
+        glDisable(GL_CULL_FACE);
+        depthShader.SetModelMatrix(sheetModelMatrix);
+        glBindVertexArray(sheetVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        // Render
+        // --- Render ---
         glViewport(0, 0, W, H);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glStencilMask(0xFF);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LESS);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
 
+        // Renderowanie sceny bez odbicia
+        glDisable(GL_STENCIL_TEST);
         shader.Use();
+        shader.SetReceiveShadows(true);
         shader.SetLightSpaceMatrix(lightSpaceMatrix);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthMap);
         shader.SetShadowMap();
-
+        glActiveTexture(GL_TEXTURE0);
         shader.SetMaterial(glm::vec3(0.4f, 0.55f, 0.7f), 0.1f, 16);
         shader.SetModelMatrix(glm::mat4(1.0f));
-        GLboolean depthEnabled;
-        glGetBooleanv(GL_DEPTH_TEST, &depthEnabled);
-
-        GLint depthFunc;
-        glGetIntegerv(GL_DEPTH_FUNC, &depthFunc);
         room.Draw();
-
         shader.SetMaterial(glm::vec3(0.6f, 0.6f, 0.6f), 0.4f, 32);
         pumaRobot->Draw(shader, baseTransform);
         
@@ -261,12 +295,63 @@ int main() {
         glDepthMask(GL_TRUE);
         glEnable(GL_CULL_FACE);
 
+
+		// Zapisanie maski lustra do bufora szablonu
+        glEnable(GL_STENCIL_TEST);
+        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilMask(0xFF); 
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        glDepthMask(GL_FALSE);
+		glDisable(GL_CULL_FACE);
+        shader.SetModelMatrix(sheetModelMatrix);
+        glBindVertexArray(sheetVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glDepthMask(GL_TRUE);
+		glEnable(GL_CULL_FACE);
+
+        // Rysowanie odbitej sceny
+        glEnable(GL_STENCIL_TEST);
+        glStencilFunc(GL_EQUAL, 1, 0xFF);
+        glStencilMask(0x00);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glCullFace(GL_FRONT);
+
+        glm::mat4 reflectionMatrix = sheetModelMatrix * glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, 1.0f)) * glm::inverse(sheetModelMatrix);
+        shader.SetMaterial(glm::vec3(0.4f, 0.55f, 0.7f), 0.1f, 16);
+        shader.SetModelMatrix(reflectionMatrix);
+        shader.SetReceiveShadows(false);
+        glDepthMask(GL_FALSE);
+        room.Draw();
+        glDepthMask(GL_TRUE);
+        shader.SetMaterial(glm::vec3(0.6f, 0.6f, 0.6f), 0.4f, 32);
+        pumaRobot->Draw(shader, reflectionMatrix * baseTransform);
+
+        glCullFace(GL_BACK);
+
+        // Rysowanie powierzchni blachy
+        glStencilFunc(GL_EQUAL, 1, 0xFF);
+        glEnable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
+
+        shader.SetMaterial(glm::vec3(0.65f, 0.65f, 0.7f), 0.8f, 64, 0.5f);
+        shader.SetModelMatrix(sheetModelMatrix);
+        glBindVertexArray(sheetVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glEnable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
+		glEnable(GL_CULL_FACE);
+
         glfwSwapBuffers(win);
         glfwPollEvents();
     }
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
+    glDeleteVertexArrays(1, &sheetVAO);
+    glDeleteBuffers(1, &sheetVBO);
     glfwTerminate();
     return 0;
 }
@@ -277,6 +362,7 @@ GLFWwindow* initWindow(int& H, int& W) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_DEPTH_BITS, 24);
     glfwWindowHint(GLFW_STENCIL_BITS, 8);
 
     UpdateScreenSize(H, W);
@@ -312,6 +398,6 @@ bool handleResize(GLFWwindow* win, int& W, int& H, glm::mat4x4& P, GLuint tex) {
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, W, H, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     glViewport(0, 0, W, H);
-    P = glm::perspective(60.0f * (float)(M_PI / 180.0), float(W) / H, 0.5f, 100.0f);
+    P = glm::perspective(60.0f * (float)(M_PI / 180.0), float(W) / H, 0.5f, 1000.0f);
     return true;
 }
