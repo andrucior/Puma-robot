@@ -139,6 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Cylinder.h" />
     <ClInclude Include="DepthShader.h" />
     <ClInclude Include="input\KeyboardController.h" />
     <ClInclude Include="input\MouseController.h" />
