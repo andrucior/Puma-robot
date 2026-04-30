@@ -400,6 +400,7 @@
     <ClInclude Include="Libraries\include\imgui\imstb_textedit.h" />
     <ClInclude Include="Libraries\include\imgui\imstb_truetype.h" />
     <ClInclude Include="Libraries\include\KHR\khrplatform.h" />
+    <ClInclude Include="MirrorShader.h" />
     <ClInclude Include="model\Mesh.h" />
     <ClInclude Include="model\MeshLoader.h" />
     <ClInclude Include="Particle.h" />
@@ -422,6 +423,7 @@
     <ClCompile Include="Libraries\include\imgui\imgui_tables.cpp" />
     <ClCompile Include="Libraries\include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Libraries\src\glad.c" />
+    <ClCompile Include="MirrorShader.cpp" />
     <ClCompile Include="model\Mesh.cpp" />
     <ClCompile Include="model\MeshLoader.cpp" />
     <ClCompile Include="robot\PumaRobot.cpp" />

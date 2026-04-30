@@ -1,4 +1,6 @@
 ﻿#define _USE_MATH_DEFINES
+#define STB_IMAGE_IMPLEMENTATION
+#include "puma/stb_image.h"
 
 #include <iostream>
 #include <glad/glad.h>
@@ -19,6 +21,7 @@
 #include "Camera.h"
 #include "MouseController.h"
 #include "puma/SceneShader.h"
+#include "puma/MirrorShader.h"
 #include "puma/Room.h"
 #include "puma/robot/PumaRobot.h"
 #include "puma/DepthShader.h"
@@ -82,6 +85,30 @@ int main() {
 
     glm::mat4 sheetModelMatrix = glm::translate(glm::mat4(1.0f), circleCenter);
     sheetModelMatrix = glm::rotate(sheetModelMatrix, glm::radians(tiltAngle), tiltAxis);
+    
+
+    // Blacha tekstura
+    MirrorShader mirrorShader(P, camera.get());
+    unsigned int mirrorTexture;
+    glGenTextures(1, &mirrorTexture);
+    glBindTexture(GL_TEXTURE_2D, mirrorTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    int tw, th, nrChannels;
+    unsigned char* data = stbi_load("puma/resources/Titanium-Scuffed_roughness.png", &tw, &th, &nrChannels, 0);
+    if (data) {
+        GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
+        glTexImage2D(GL_TEXTURE_2D, 0, format, tw, th, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else {
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
+
+
     // Quad VAOd
     unsigned int VAO, VBO;
     
@@ -240,6 +267,21 @@ int main() {
         if (MouseController::g_leftDown)
             camera->updateFromController();
 
+        // Płaszczyzna lustra
+        glm::vec3 mirrorPos = glm::vec3(sheetModelMatrix[3]);
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(sheetModelMatrix)));
+        glm::vec3 mirrorNormal = glm::normalize(normalMatrix * glm::vec3(0.0f, 1.0f, 0.0f));
+
+        glm::vec3 viewDir = camera->cameraPosition - mirrorPos;
+        float side = glm::dot(viewDir, mirrorNormal);
+        glm::vec4 clipPlane;
+        if (side > 0.0f) {
+            clipPlane = glm::vec4(-mirrorNormal, -glm::dot(-mirrorNormal, mirrorPos));
+        }
+        else {
+            clipPlane = glm::vec4(mirrorNormal, -glm::dot(mirrorNormal, mirrorPos));
+        }
+
         // Animacja robota
         glm::mat4 baseTransform = glm::mat4(1.0f);
         if (pumaRobot->isAnimating) {
@@ -282,7 +324,7 @@ int main() {
         glCullFace(GL_BACK);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        // --- Render ---
+        // -- RENDER --
         glViewport(0, 0, W, H);
         glStencilMask(0xFF);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -370,16 +412,26 @@ int main() {
         glStencilMask(0x00);
         glClear(GL_DEPTH_BUFFER_BIT);
         glCullFace(GL_FRONT);
+        glEnable(GL_CLIP_DISTANCE0);
 
         glm::mat4 reflectionMatrix = sheetModelMatrix * glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, 1.0f)) * glm::inverse(sheetModelMatrix);
         shader.SetMaterial(glm::vec3(0.4f, 0.55f, 0.7f), 0.1f, 16);
         shader.SetModelMatrix(reflectionMatrix);
         shader.SetReceiveShadows(false);
+		shader.SetClipPlane(clipPlane);
         glDepthMask(GL_FALSE);
         room.Draw();
         glDepthMask(GL_TRUE);
+
         shader.SetMaterial(glm::vec3(0.6f, 0.6f, 0.6f), 0.4f, 32);
         pumaRobot->Draw(shader, reflectionMatrix * baseTransform);
+
+        glDisable(GL_CULL_FACE);
+        shader.SetMaterial(glm::vec3(0.8f, 0.3f, 0.3f), 0.5f, 32);
+        shader.SetModelMatrix(reflectionMatrix * cylModelMatrix);
+        glBindVertexArray(cylinder.cylVAO);
+        glDrawArrays(GL_TRIANGLES, 0, cylinder.cylVerts.size() / 8);
+        glEnable(GL_CULL_FACE);
         
         if (pumaRobot->isAnimating)
         {
@@ -418,20 +470,26 @@ int main() {
             glEnable(GL_CULL_FACE);
             glCullFace(GL_BACK);
         }
+        shader.SetClipPlane(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+        glDisable(GL_CLIP_DISTANCE0);
 
         // Rysowanie powierzchni blachy
         glStencilFunc(GL_EQUAL, 1, 0xFF);
         glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glDisable(GL_DEPTH_TEST);
-		glDisable(GL_CULL_FACE);
+        glDisable(GL_CULL_FACE);
 
-        shader.SetMaterial(glm::vec3(0.65f, 0.65f, 0.7f), 0.8f, 64, 0.5f);
-        shader.SetModelMatrix(sheetModelMatrix);
+        mirrorShader.Use();
+        mirrorShader.SetModelMatrix(sheetModelMatrix);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, mirrorTexture);
         glBindVertexArray(sheetVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+
         glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
         glDisable(GL_BLEND);
-		glEnable(GL_CULL_FACE);
 
         glfwSwapBuffers(win);
         glfwPollEvents();

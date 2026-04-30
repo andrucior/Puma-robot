@@ -142,5 +142,6 @@ public:
 	void SetLightSpaceMatrix(const glm::mat4& lightSpaceMtx) const;
 	void SetShadowMap() const;
 	void SetReceiveShadows(bool receive) const;
+	void SetClipPlane(const glm::vec4& plane) const;
 };
 
