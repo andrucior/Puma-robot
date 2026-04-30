@@ -99,3 +99,22 @@ void PumaRobot::ApplyInverseKinematics(glm::vec3 pos, glm::vec3 normal)
     SetJointAngle(4, glm::degrees(a4));
     SetJointAngle(5, glm::degrees(a5));
 }
+
+glm::vec3 PumaRobot::GetTipPosition()
+{
+    glm::mat4 worldMatrix = glm::mat4(1.0f);
+
+
+    for (const auto& part : m_parts) {
+        worldMatrix = part->GetWorldMatrix(worldMatrix);
+    }
+
+   
+    glm::vec4 localTip(-2.05, 0.27, -0.26f, 1.0f);
+
+   
+
+    glm::vec4 worldTip = worldMatrix * localTip;
+
+    return worldTip;
+}

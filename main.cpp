@@ -22,6 +22,8 @@
 #include "puma/Room.h"
 #include "puma/robot/PumaRobot.h"
 #include "puma/DepthShader.h"
+#include "puma/ParticleShader.h"
+#include "puma/Particle.h"
 
 GLFWwindow* initWindow(int& H, int& W);
 void UpdateScreenSize(int& H, int& W);
@@ -112,6 +114,29 @@ int main() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, W, H, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     glViewport(0, 0, W, H);
 
+    // Iskry
+    float particle_vertices[] = {
+        // Pos      // Tex
+        0.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f,
+
+        0.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, 1.0f,
+        1.0f, 0.0f, 1.0f, 0.0f
+    };
+
+    unsigned int particleVAO, vbo;
+    glGenVertexArrays(1, &particleVAO);
+    glGenBuffers(1, &vbo);
+    glBindVertexArray(particleVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(particle_vertices), particle_vertices, GL_STATIC_DRAW);
+
+    // Jeden atrybut vec4 (Location 0)
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+
     float lastTime = 0.0f;
     bool firstFrame = true;
 
@@ -170,6 +195,22 @@ int main() {
     glm::vec3 lightPosTop = glm::vec3(0.0f, 3.5f, 0.0f);
     glm::vec3 lightPosLeft = glm::vec3(0.0f, 0.0f, 3.5f);
     DepthShader depthShader = DepthShader();
+    ParticleShader particleShader = ParticleShader();
+    ParticleSystem particleSystem = ParticleSystem(*pumaRobot);
+
+    GLuint lineVAO, lineVBO;
+    glGenVertexArrays(1, &lineVAO);
+    glGenBuffers(1, &lineVBO);
+
+    glBindVertexArray(lineVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+    glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 
     while (!glfwWindowShouldClose(win)) {
         const float currentTime = (float)glfwGetTime();
@@ -192,6 +233,8 @@ int main() {
             glm::vec3 targetPos = circleCenter + glm::vec3(rotatedPoint);
             pumaRobot->ApplyInverseKinematics(targetPos, rotatedNormal);
         }
+
+        particleSystem.Update(deltaTime);
 
         // Macierz światła 
         glm::mat4 lightView = glm::lookAt(lightPosLeft + lightPosTop, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
@@ -243,7 +286,42 @@ int main() {
         room.Draw();
         shader.SetMaterial(glm::vec3(0.6f, 0.6f, 0.6f), 0.4f, 32);
         pumaRobot->Draw(shader, baseTransform);
+        
+        if (pumaRobot->isAnimating) {
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            glDepthMask(GL_FALSE);
+            glDisable(GL_CULL_FACE);
 
+            particleShader.Use();
+            particleShader.SetProjection(P);
+            particleShader.SetView(camera->view());
+
+            glBindVertexArray(particleVAO);
+            glLineWidth(3.0f);
+            for (const auto& p : particleSystem.particles) {
+                if (p.Life > 0.0f) {
+                    float lineVertices[] = {
+                        p.PrevPosition.x, p.PrevPosition.y, p.PrevPosition.z,
+                        p.Position.x,     p.Position.y,     p.Position.z
+                    };
+
+                    particleShader.SetColor(p.Color);
+
+                    glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(lineVertices), lineVertices);
+
+                    glBindVertexArray(lineVAO);
+                    glDrawArrays(GL_LINES, 0, 2);
+
+                }
+            }
+            glLineWidth(1.0f);
+            glBindVertexArray(0);
+            glDisable(GL_BLEND);
+            glDepthMask(GL_TRUE);
+            glEnable(GL_CULL_FACE);
+        }
 
 		// Zapisanie maski lustra do bufora szablonu
         glEnable(GL_STENCIL_TEST);
@@ -276,8 +354,44 @@ int main() {
         glDepthMask(GL_TRUE);
         shader.SetMaterial(glm::vec3(0.6f, 0.6f, 0.6f), 0.4f, 32);
         pumaRobot->Draw(shader, reflectionMatrix * baseTransform);
+        
+        if (pumaRobot->isAnimating)
+        {
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            glDepthMask(GL_FALSE);
+            glDisable(GL_CULL_FACE);
 
-        glCullFace(GL_BACK);
+            particleShader.Use();
+            particleShader.SetProjection(P);
+            particleShader.SetView(camera->view() * reflectionMatrix);
+
+            glBindVertexArray(lineVAO);
+            glLineWidth(3.0f);
+
+            for (const auto& p : particleSystem.particles) {
+                if (p.Life > 0.0f) {
+                    float lineVertices[] = {
+                        p.PrevPosition.x, p.PrevPosition.y, p.PrevPosition.z,
+                        p.Position.x,     p.Position.y,     p.Position.z
+                    };
+
+                    particleShader.SetColor(p.Color);
+
+                    glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(lineVertices), lineVertices);
+
+                    glDrawArrays(GL_LINES, 0, 2);
+                }
+            }
+            glLineWidth(1.0f);
+            glBindVertexArray(0);
+
+            glDisable(GL_BLEND);
+            glDepthMask(GL_TRUE);
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_BACK);
+        }
 
         // Rysowanie powierzchni blachy
         glStencilFunc(GL_EQUAL, 1, 0xFF);

@@ -15,7 +15,7 @@ public:
     void SetJointAngle(int jointIndex, float angle);
 	float GetJointAngle(int jointIndex) const;
     void ApplyInverseKinematics(glm::vec3 pos, glm::vec3 normal);
-
+    glm::vec3 GetTipPosition();
     bool isAnimating = false;
 
 private:

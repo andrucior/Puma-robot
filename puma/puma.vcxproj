@@ -401,6 +401,8 @@
     <ClInclude Include="Libraries\include\KHR\khrplatform.h" />
     <ClInclude Include="model\Mesh.h" />
     <ClInclude Include="model\MeshLoader.h" />
+    <ClInclude Include="Particle.h" />
+    <ClInclude Include="ParticleShader.h" />
     <ClInclude Include="robot\PumaRobot.h" />
     <ClInclude Include="robot\RobotPart.h" />
     <ClInclude Include="Room.h" />

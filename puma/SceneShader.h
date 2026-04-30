@@ -86,7 +86,7 @@ class SceneShader {
 		void main()
 		{
 			// ambient
-			float ambientStrength = 0.2;
+			float ambientStrength = 0.1;
 			vec3 ambient = ambientStrength * vec3(1.0);
 
 			if (ambientOnly) {
@@ -113,8 +113,8 @@ class SceneShader {
 			float specLeft = pow(max(dot(viewDir, reflectDirLeft), 0.0), float(shininess));
 			vec3 specularLeft = specStrength * specLeft * vec3(1.0);
 
-			vec3 diffuse = diffuseTop + diffuseLeft;
-			vec3 specular = specularTop + specularLeft;
+			vec3 diffuse = (diffuseTop + diffuseLeft) / 2;
+			vec3 specular = (specularTop + specularLeft) / 2;
 			
 			float shadow = 0.0;
 			if (receiveShadows) {

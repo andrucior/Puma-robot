@@ -37,6 +37,11 @@ void RobotPart::SetPivotPoint(const glm::vec3& pivot)
     m_pivotPoint = pivot;
 }
 
+glm::vec3 RobotPart::GetPivotPoint()
+{
+    return m_pivotPoint;
+}
+
 void RobotPart::Draw(SceneShader& shader, const glm::mat4& parentTransform) const
 {
     glm::mat4 currentTransform = parentTransform * m_localTransform;
@@ -73,4 +78,17 @@ void RobotPart::DrawShadow(DepthShader& shader, const glm::mat4& parentTransform
     {
         child->DrawShadow(shader, currentTransform);
     }
+}
+
+glm::mat4 RobotPart::GetWorldMatrix(const glm::mat4& parentTransform)
+{
+    // 1. Zaczynamy od transformacji bazowej (lokalny offset względem rodzica)
+    glm::mat4 model = parentTransform * m_localTransform;
+
+    // 2. Dodajemy obrót stawu (wokół pivota)
+    model = glm::translate(model, m_pivotPoint);
+    model = glm::rotate(model, glm::radians(m_jointAngle), m_rotationAxis);
+    model = glm::translate(model, -m_pivotPoint);
+
+    return model;
 }
