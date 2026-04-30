@@ -24,6 +24,7 @@
 #include "puma/DepthShader.h"
 #include "puma/ParticleShader.h"
 #include "puma/Particle.h"
+#include "puma/Cylinder.h"
 
 GLFWwindow* initWindow(int& H, int& W);
 void UpdateScreenSize(int& H, int& W);
@@ -81,7 +82,6 @@ int main() {
 
     glm::mat4 sheetModelMatrix = glm::translate(glm::mat4(1.0f), circleCenter);
     sheetModelMatrix = glm::rotate(sheetModelMatrix, glm::radians(tiltAngle), tiltAxis);
-
     // Quad VAOd
     unsigned int VAO, VBO;
     
@@ -212,6 +212,25 @@ int main() {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+    Cylinder cylinder = Cylinder();
+    glGenVertexArrays(1, &cylinder.cylVAO);
+    glGenBuffers(1, &cylinder.cylVBO);
+    glBindVertexArray(cylinder.cylVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cylinder.cylVBO);
+    glBufferData(GL_ARRAY_BUFFER, cylinder.cylVerts.size() * sizeof(float), cylinder.cylVerts.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    // Macierz modelu - ustawienie pozycji walca na podłodze i położenie go na boku
+    glm::mat4 cylModelMatrix = glm::mat4(1.0f);
+    cylModelMatrix = glm::translate(cylModelMatrix, glm::vec3(-2.0f, -1, -2.0f));
+    cylModelMatrix = glm::rotate(cylModelMatrix, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
     while (!glfwWindowShouldClose(win)) {
         const float currentTime = (float)glfwGetTime();
         const float deltaTime = currentTime - lastTime;
@@ -284,9 +303,16 @@ int main() {
         shader.SetMaterial(glm::vec3(0.4f, 0.55f, 0.7f), 0.1f, 16);
         shader.SetModelMatrix(glm::mat4(1.0f));
         room.Draw();
-        shader.SetMaterial(glm::vec3(0.6f, 0.6f, 0.6f), 0.4f, 32);
+        shader.SetMaterial(glm::vec3(0.6f, 0.6f, 0.6f), 0.6f, 32);
         pumaRobot->Draw(shader, baseTransform);
-        
+
+        glDisable(GL_CULL_FACE);
+        shader.SetMaterial(glm::vec3(0.8f, 0.3f, 0.3f), 0.5f, 32); 
+        shader.SetModelMatrix(cylModelMatrix);
+        glBindVertexArray(cylinder.cylVAO);
+        glDrawArrays(GL_TRIANGLES, 0, cylinder.cylVerts.size() / 8);
+        glEnable(GL_CULL_FACE);
+
         if (pumaRobot->isAnimating) {
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE);
