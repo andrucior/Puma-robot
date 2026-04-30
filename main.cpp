@@ -22,6 +22,8 @@
 #include "puma/Room.h"
 #include "puma/robot/PumaRobot.h"
 #include "puma/DepthShader.h"
+#include "puma/ParticleShader.h"
+#include "puma/Particle.h"
 
 GLFWwindow* initWindow(int& H, int& W);
 void UpdateScreenSize(int& H, int& W);
@@ -82,6 +84,29 @@ int main() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, W, H, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     glViewport(0, 0, W, H);
 
+    // Iskry
+    float particle_vertices[] = {
+        // Pos      // Tex
+        0.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f,
+
+        0.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, 1.0f,
+        1.0f, 0.0f, 1.0f, 0.0f
+    };
+
+    unsigned int particleVAO, vbo;
+    glGenVertexArrays(1, &particleVAO);
+    glGenBuffers(1, &vbo);
+    glBindVertexArray(particleVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(particle_vertices), particle_vertices, GL_STATIC_DRAW);
+
+    // Jeden atrybut vec4 (Location 0)
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+
     float lastTime = 0.0f;
     bool firstFrame = true;
 
@@ -140,6 +165,8 @@ int main() {
     glm::vec3 lightPosTop = glm::vec3(0.0f, 3.5f, 0.0f);
     glm::vec3 lightPosLeft = glm::vec3(0.0f, 1.0f, 3.5f);
     DepthShader depthShader = DepthShader();
+    ParticleShader particleShader = ParticleShader();
+    ParticleSystem particleSystem = ParticleSystem(*pumaRobot);
 
     while (!glfwWindowShouldClose(win)) {
         const float currentTime = (float)glfwGetTime();
@@ -162,6 +189,8 @@ int main() {
             glm::vec3 targetPos = circleCenter + glm::vec3(rotatedPoint);
             pumaRobot->ApplyInverseKinematics(targetPos, rotatedNormal);
         }
+
+        particleSystem.Update(deltaTime);
 
         // Macierz światła 
         glm::mat4 lightView = glm::lookAt(lightPosTop, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
@@ -209,6 +238,28 @@ int main() {
 
         shader.SetMaterial(glm::vec3(0.6f, 0.6f, 0.6f), 0.4f, 32);
         pumaRobot->Draw(shader, baseTransform);
+        
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Tryb "Additive" - świetny dla iskier/ognia
+        glDepthMask(GL_FALSE);
+        glDisable(GL_CULL_FACE);
+
+        particleShader.Use();
+        particleShader.SetProjection(P); // Przekaż macierz projekcji (tę samą co do sceny)
+        particleShader.SetView(camera->view());
+
+        glBindVertexArray(particleVAO);
+        for (const auto& particle : particleSystem.particles) {
+            if (particle.Life > 0.0f) {
+                particleShader.SetOffset(particle.Position);
+                particleShader.SetColor(particle.Color);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+            }
+        }
+        glBindVertexArray(0);
+        glDisable(GL_BLEND);
+        glDepthMask(GL_TRUE);
+        glEnable(GL_CULL_FACE);
 
         glfwSwapBuffers(win);
         glfwPollEvents();

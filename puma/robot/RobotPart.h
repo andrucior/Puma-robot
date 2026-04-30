@@ -17,10 +17,13 @@ public:
     void SetLocalTransform(const glm::mat4& transform);
     void SetRotationAxis(const glm::vec3& axis);
     void SetPivotPoint(const glm::vec3& pivot);
+    glm::vec3 GetPivotPoint();
 
     void Draw(SceneShader& shader, const glm::mat4& parentTransform) const;
     void DrawShadow(DepthShader& shader, const glm::mat4& parentTransform) const;
 
+    glm::mat4 GetWorldMatrix(const glm::mat4& parentTransform);
+    glm::mat4 GetLocalTransform() { return m_localTransform; };
 private:
     std::shared_ptr<Mesh> m_mesh;
     std::vector<std::shared_ptr<RobotPart>> m_children;
