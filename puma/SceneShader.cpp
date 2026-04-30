@@ -110,4 +110,10 @@ void SceneShader::SetMaterial(const glm::vec3& color, float specStrength, int sh
 	glUniform1i(glGetUniformLocation(shader, "ambientOnly"), ambientOnly ? 1 : 0);
 }
 
+void SceneShader::SetClipPlane(const glm::vec4& plane) const
+{
+	glUseProgram(shader);
+	glUniform4fv(glGetUniformLocation(shader, "clipPlane"), 1, glm::value_ptr(plane));
+}
+
 
