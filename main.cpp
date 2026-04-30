@@ -198,6 +198,20 @@ int main() {
     ParticleShader particleShader = ParticleShader();
     ParticleSystem particleSystem = ParticleSystem(*pumaRobot);
 
+    GLuint lineVAO, lineVBO;
+    glGenVertexArrays(1, &lineVAO);
+    glGenBuffers(1, &lineVBO);
+
+    glBindVertexArray(lineVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+    glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
     while (!glfwWindowShouldClose(win)) {
         const float currentTime = (float)glfwGetTime();
         const float deltaTime = currentTime - lastTime;
@@ -273,28 +287,41 @@ int main() {
         shader.SetMaterial(glm::vec3(0.6f, 0.6f, 0.6f), 0.4f, 32);
         pumaRobot->Draw(shader, baseTransform);
         
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Tryb "Additive" - świetny dla iskier/ognia
-        glDepthMask(GL_FALSE);
-        glDisable(GL_CULL_FACE);
+        if (pumaRobot->isAnimating) {
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            glDepthMask(GL_FALSE);
+            glDisable(GL_CULL_FACE);
 
-        particleShader.Use();
-        particleShader.SetProjection(P); // Przekaż macierz projekcji (tę samą co do sceny)
-        particleShader.SetView(camera->view());
+            particleShader.Use();
+            particleShader.SetProjection(P);
+            particleShader.SetView(camera->view());
 
-        glBindVertexArray(particleVAO);
-        for (const auto& particle : particleSystem.particles) {
-            if (particle.Life > 0.0f) {
-                particleShader.SetOffset(particle.Position);
-                particleShader.SetColor(particle.Color);
-                glDrawArrays(GL_TRIANGLES, 0, 6);
+            glBindVertexArray(particleVAO);
+            glLineWidth(3.0f);
+            for (const auto& p : particleSystem.particles) {
+                if (p.Life > 0.0f) {
+                    float lineVertices[] = {
+                        p.PrevPosition.x, p.PrevPosition.y, p.PrevPosition.z,
+                        p.Position.x,     p.Position.y,     p.Position.z
+                    };
+
+                    particleShader.SetColor(p.Color);
+
+                    glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(lineVertices), lineVertices);
+
+                    glBindVertexArray(lineVAO);
+                    glDrawArrays(GL_LINES, 0, 2);
+
+                }
             }
+            glLineWidth(1.0f);
+            glBindVertexArray(0);
+            glDisable(GL_BLEND);
+            glDepthMask(GL_TRUE);
+            glEnable(GL_CULL_FACE);
         }
-        glBindVertexArray(0);
-        glDisable(GL_BLEND);
-        glDepthMask(GL_TRUE);
-        glEnable(GL_CULL_FACE);
-
 
 		// Zapisanie maski lustra do bufora szablonu
         glEnable(GL_STENCIL_TEST);
@@ -327,8 +354,44 @@ int main() {
         glDepthMask(GL_TRUE);
         shader.SetMaterial(glm::vec3(0.6f, 0.6f, 0.6f), 0.4f, 32);
         pumaRobot->Draw(shader, reflectionMatrix * baseTransform);
+        
+        if (pumaRobot->isAnimating)
+        {
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            glDepthMask(GL_FALSE);
+            glDisable(GL_CULL_FACE);
 
-        glCullFace(GL_BACK);
+            particleShader.Use();
+            particleShader.SetProjection(P);
+            particleShader.SetView(camera->view() * reflectionMatrix);
+
+            glBindVertexArray(lineVAO);
+            glLineWidth(3.0f);
+
+            for (const auto& p : particleSystem.particles) {
+                if (p.Life > 0.0f) {
+                    float lineVertices[] = {
+                        p.PrevPosition.x, p.PrevPosition.y, p.PrevPosition.z,
+                        p.Position.x,     p.Position.y,     p.Position.z
+                    };
+
+                    particleShader.SetColor(p.Color);
+
+                    glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(lineVertices), lineVertices);
+
+                    glDrawArrays(GL_LINES, 0, 2);
+                }
+            }
+            glLineWidth(1.0f);
+            glBindVertexArray(0);
+
+            glDisable(GL_BLEND);
+            glDepthMask(GL_TRUE);
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_BACK);
+        }
 
         // Rysowanie powierzchni blachy
         glStencilFunc(GL_EQUAL, 1, 0xFF);
